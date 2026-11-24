@@ -11,7 +11,7 @@ import (
 // -X main.date=..." in the release workflow; a plain `go build` keeps the
 // defaults, and `dkit about` says so.
 var (
-	version = "0.1.0"
+	version = "0.1.1"
 	commit  = ""
 	date    = ""
 )

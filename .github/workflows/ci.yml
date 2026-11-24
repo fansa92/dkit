@@ -55,9 +55,13 @@ jobs:
         run: |
           set -eu
           for target in \
-            linux/amd64 linux/arm64 linux/arm/7 \
+            linux/amd64 linux/arm64 linux/arm/7 linux/riscv64 linux/loong64 \
             darwin/amd64 darwin/arm64 \
-            windows/amd64 windows/arm64
+            windows/amd64 windows/arm64 \
+            freebsd/amd64 freebsd/arm64 \
+            openbsd/amd64 openbsd/arm64 \
+            netbsd/amd64 netbsd/arm64 \
+            solaris/amd64 illumos/amd64
           do
             goos="${target%%/*}"
             rest="${target#*/}"

@@ -19,12 +19,24 @@ $ echo "$TOKEN" | dkit jwt --payload | dkit jsonpath --raw '$..sub'
 **下载二进制**（推荐）—— 到 [Releases](https://github.com/fansa92/dkit/releases) 挑一个包，解压即用，无需运行时：
 
 ```
-dkit_0.1.0_windows_amd64.zip
-dkit_0.1.0_linux_amd64.tar.gz
-dkit_0.1.0_darwin_arm64.tar.gz
+dkit_0.1.1_windows_amd64.zip
+dkit_0.1.1_linux_amd64.tar.gz
+dkit_0.1.1_darwin_arm64.tar.gz
 ```
 
-覆盖 `windows` / `linux` / `darwin` × `amd64` / `arm64`，另有 `linux_armv7`（树莓派一类）。
+共 17 个目标，覆盖三大桌面系统以及主流 Unix：
+
+| 系统 | 架构 |
+|---|---|
+| Windows | amd64、arm64 |
+| macOS | amd64、arm64 |
+| Linux | amd64、arm64、armv7、riscv64、loong64 |
+| FreeBSD | amd64、arm64 |
+| OpenBSD | amd64、arm64 |
+| NetBSD | amd64、arm64 |
+| Solaris / illumos | amd64 |
+
+全部为 `CGO_ENABLED=0` 的纯静态二进制，不依赖 libc 或 Go 运行时。
 
 **用 Go 装**：
 
@@ -165,10 +177,17 @@ dkit regex -p '\b\d+\.\d+\.\d+\.\d+\b' access.log | sort -u
 本地交叉编译（`CGO_ENABLED=0`，纯静态）：
 
 ```bash
-for t in windows/amd64 windows/arm64 linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
-  os=${t%/*}; arch=${t#*/}; ext=""; [ "$os" = windows ] && ext=.exe
-  CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -ldflags "-s -w" \
-    -o "dist/dkit_${os}_${arch}${ext}" .
+for t in \
+  windows/amd64 windows/arm64 darwin/amd64 darwin/arm64 \
+  linux/amd64 linux/arm64 linux/arm/7 linux/riscv64 linux/loong64 \
+  freebsd/amd64 freebsd/arm64 openbsd/amd64 openbsd/arm64 \
+  netbsd/amd64 netbsd/arm64 solaris/amd64 illumos/amd64
+do
+  os=${t%%/*}; rest=${t#*/}; arch=${rest%%/*}; arm=""
+  case "$t" in */*/*) arm=${rest#*/} ;; esac
+  ext=""; [ "$os" = windows ] && ext=.exe
+  CGO_ENABLED=0 GOOS=$os GOARCH=$arch GOARM=$arm go build -trimpath -ldflags "-s -w" \
+    -o "dist/dkit_${os}_${arch}${arm:+v$arm}${ext}" .
 done
 ```
 
@@ -176,20 +195,20 @@ done
 
 ```bash
 go build -ldflags "-s -w \
-  -X main.version=0.1.0 \
+  -X main.version=0.1.1 \
   -X main.commit=$(git rev-parse --short HEAD) \
   -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" .
 ```
 
 GitHub Actions 两套：
 
-- **`.github/workflows/ci.yml`** — push / PR 时跑 `gofmt` 检查、`go vet`、以及 7 个目标平台的交叉编译，防止某平台编译不过。
-- **`.github/workflows/release.yml`** — 推 `v*` tag（或手动触发）时，7 个目标并行编译，打成 `.zip` / `.tar.gz`，附 README 与 LICENSE，汇总 `checksums.txt` 并创建 Release。
+- **`.github/workflows/ci.yml`** — push / PR 时跑 `gofmt` 检查、`go vet`、以及 17 个目标平台的交叉编译，防止某平台编译不过。
+- **`.github/workflows/release.yml`** — 推 `v*` tag（或手动触发）时，17 个目标并行编译，打成 `.zip` / `.tar.gz`，附 README 与 LICENSE，汇总 `checksums.txt` 并创建 Release。
 
 发布新版本：
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
+git tag v0.1.1 && git push origin v0.1.1
 ```
 
 ## 与 DevToys 的关系
