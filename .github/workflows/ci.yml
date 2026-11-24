@@ -1,0 +1,74 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt
+        run: |
+          set -eu
+          bad="$(gofmt -l .)"
+          if [ -n "$bad" ]; then
+            echo "these files are not gofmt'd:"
+            echo "$bad"
+            exit 1
+          fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: test
+        run: go test ./...
+
+  cross:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Every target the release publishes must at least compile here, so a
+      # platform break shows up on the PR instead of at tag time.
+      - name: cross-compile
+        run: |
+          set -eu
+          for target in \
+            linux/amd64 linux/arm64 linux/arm/7 \
+            darwin/amd64 darwin/arm64 \
+            windows/amd64 windows/arm64
+          do
+            goos="${target%%/*}"
+            rest="${target#*/}"
+            goarch="${rest%%/*}"
+            goarm=""
+            case "$target" in
+              */*/*) goarm="${target##*/}" ;;
+            esac
+            label="$goos/$goarch"
+            [ -n "$goarm" ] && label="$label (armv$goarm)"
+            echo "building $label"
+            GOOS="$goos" GOARCH="$goarch" GOARM="$goarm" \
+              go build -trimpath -ldflags "-s -w" -o "/tmp/dkit-$goos-$goarch" .
+          done
